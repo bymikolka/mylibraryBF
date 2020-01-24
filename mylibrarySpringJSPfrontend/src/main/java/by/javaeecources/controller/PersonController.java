@@ -1,12 +1,10 @@
 package by.javaeecources.controller;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.transaction.Transactional;
 
 import org.springframework.beans.BeanUtils;
@@ -53,10 +51,7 @@ public class PersonController {
 	@GetMapping
     public String home(@RequestParam("recordsPerPage") Optional<Integer> pageSize, 
     		@RequestParam("currentPage") Optional<Integer> page, 
-            @RequestParam(defaultValue = "id") String sortBy,
-            final UriComponentsBuilder uriBuilder,
-            final HttpServletResponse response,
-    		Model model) throws IOException {
+            @RequestParam(defaultValue = "id") String sortBy, Model model){
 		 
 		RestTemplate restTemplate = new RestTemplate();
 		
@@ -68,7 +63,8 @@ public class PersonController {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Accept", MediaType.APPLICATION_JSON_VALUE);
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(url+"/api/persons")
+        UriComponentsBuilder builder = UriComponentsBuilder.
+        		fromHttpUrl(url+"/api/persons")
                 .queryParam("recordsPerPage", recordsPerPage)
                 .queryParam("currentPage", currentPage);
         HttpEntity<?> entity = new HttpEntity<>(headers);        
@@ -84,8 +80,7 @@ public class PersonController {
         
         List<Person> personsList = responseEntity.getBody();
         assert personsList != null;
-
-        //List<Person> personsList = personService.findAll(currentPage, recordsPerPage, sortBy);
+//count must be added to one list with personList for return as couple in one response
         long rows = 
                 restTemplate.exchange(
                         url+"/api/persons/count",
@@ -165,9 +160,6 @@ public class PersonController {
         HttpHeaders headers = new HttpHeaders();
         headers.add("Accept", MediaType.APPLICATION_JSON_VALUE);
  
-        RestTemplate restTemplate = new RestTemplate();
-
-	    
 	    if (id.isPresent()) {
 
 	    	 ResponseEntity<Person> p = new RestTemplate().exchange(
@@ -178,7 +170,6 @@ public class PersonController {
 	    	
 	        if (p.getBody() != null) {
 	        	Person person = p.getBody();
-	        	System.out.println(person);
 				model.addAttribute("person", person);
 	        }
 	        model.addAttribute("mapRoles", mapRoles);
