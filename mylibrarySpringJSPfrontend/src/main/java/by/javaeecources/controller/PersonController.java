@@ -11,6 +11,7 @@ import javax.transaction.Transactional;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -32,8 +33,6 @@ public class PersonController {
 
 
 	
-	//@Autowired
-   // private ApplicationEventPublisher eventPublisher;
 	private static final int INITIAL_PAGE = 0;
 	private static final int INITIAL_PAGE_SIZE = 10;
 	private static final int[] PAGE_SIZES = { 5, 10, 25, 50 };
@@ -65,11 +64,20 @@ public class PersonController {
 		int tempPageNumber = page.isPresent()?page.get()-1:1;
         int currentPage = (page.orElse(0) < 1) ? INITIAL_PAGE : tempPageNumber;
 
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Accept", MediaType.APPLICATION_JSON_VALUE);
+
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(url+"/api/persons")
+                .queryParam("recordsPerPage", recordsPerPage)
+                .queryParam("currentPage", currentPage);
+        HttpEntity<?> entity = new HttpEntity<>(headers);        
+        
         ResponseEntity<List<Person>> responseEntity =
                 restTemplate.exchange(
-                        url+"/api/persons",
+                		builder.toUriString(),
                         HttpMethod.GET,
-                        null,
+                        entity,
                         new ParameterizedTypeReference<List<Person>>() {
                         });
 
@@ -77,11 +85,6 @@ public class PersonController {
         List<Person> personsList = responseEntity.getBody();
         assert personsList != null;
 
-        
-
-        //personsList.forEach(System.out::println);
-
-        
         //List<Person> personsList = personService.findAll(currentPage, recordsPerPage, sortBy);
         long rows = 
                 restTemplate.exchange(
@@ -95,9 +98,6 @@ public class PersonController {
 			nOfPages++;
 		}
 
-        //eventPublisher.publishEvent(new PaginatedResultsRetrievedEvent<Person>(Person.class, uriBuilder, response, currentPage, nOfPages, recordsPerPage));
-
-		
 		model.addAttribute("noOfPages", nOfPages);
 		model.addAttribute("currentPage", currentPage);
 		model.addAttribute("recordsPerPage", recordsPerPage);
