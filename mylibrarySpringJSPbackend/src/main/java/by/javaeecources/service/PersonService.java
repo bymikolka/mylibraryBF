@@ -18,6 +18,8 @@ public interface PersonService {
 	
 	public List<Person> findAll();
 	
+	public List<Person> findAll(Integer pageNo, Integer pageSize, String sortBy);
+	
 	public List<Person> findByFirstname(String name);
 	
 	public Person createOrUpdatePerson(Person person);
