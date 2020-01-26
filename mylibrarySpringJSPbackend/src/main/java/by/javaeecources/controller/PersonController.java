@@ -28,6 +28,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import by.javaeecources.model.Person;
 import by.javaeecources.model.PersonDto;
 import by.javaeecources.service.PersonService;
+
 @RestController
 public class PersonController {
 
@@ -37,69 +38,68 @@ public class PersonController {
 	private static final int INITIAL_PAGE = 0;
 	private static final int INITIAL_PAGE_SIZE = 10;
 	private static final int[] PAGE_SIZES = { 5, 10, 25, 50 };
-	
+
 	Map<Long, String> mapRoles = null;
+
 	public Map<Long, String> getRoles() {
-		if(mapRoles!=null) {
+		if (mapRoles != null) {
 			return mapRoles;
 		}
 		mapRoles = new HashMap<>();
-	    mapRoles.put(1L, "Teacher");
-	    mapRoles.put(2L, "Student");
-	    return mapRoles;
+		mapRoles.put(1L, "Teacher");
+		mapRoles.put(2L, "Student");
+		return mapRoles;
 	}
-	
-	/*@GetMapping("/api/persons")
-	public ResponseEntity<List<Person>> home() {
-		return ResponseEntity.ok(personService.findAll());
-    	
-    }*/
-	
-	@GetMapping({"/api/persons", "/api/persons/recordsPerPage={recordsPerPage}&currentPage={currentPage}"})
-    public ResponseEntity<List<Person>> home(@RequestParam("recordsPerPage") Optional<Integer> pageSize, 
-    		@RequestParam("currentPage") Optional<Integer> page, 
-            @RequestParam(defaultValue = "id") String sortBy,
-    		Model model) {
-		
-		int recordsPerPage = pageSize.orElse(INITIAL_PAGE_SIZE);
-		int tempPageNumber = page.isPresent()?page.get()-1:1;
-        int currentPage = (page.orElse(0) < 1) ? INITIAL_PAGE : tempPageNumber;
 
-        List<Person> personsList = personService.findAll(currentPage, recordsPerPage, sortBy);
-        long rows = personService.count();
-        
+	/*
+	 * @GetMapping("/api/persons") public ResponseEntity<List<Person>> home() {
+	 * return ResponseEntity.ok(personService.findAll());
+	 * 
+	 * }
+	 */
+
+	@GetMapping({ "/api/persons", "/api/persons/recordsPerPage={recordsPerPage}&currentPage={currentPage}" })
+	public ResponseEntity<List<Person>> home(@RequestParam("recordsPerPage") Optional<Integer> pageSize,
+			@RequestParam("currentPage") Optional<Integer> page, @RequestParam(defaultValue = "id") String sortBy,
+			Model model) {
+
+		int recordsPerPage = pageSize.orElse(INITIAL_PAGE_SIZE);
+		int tempPageNumber = page.isPresent() ? page.get() - 1 : 1;
+		int currentPage = (page.orElse(0) < 1) ? INITIAL_PAGE : tempPageNumber;
+
+		List<Person> personsList = personService.findAll(currentPage, recordsPerPage, sortBy);
+		long rows = personService.count();
+
 		long nOfPages = rows / recordsPerPage;
 		if (nOfPages % recordsPerPage > 0 && (nOfPages * recordsPerPage != rows)) {
 			nOfPages++;
 		}
-		
+
 		model.addAttribute("noOfPages", nOfPages);
 		model.addAttribute("currentPage", currentPage);
 		model.addAttribute("recordsPerPage", recordsPerPage);
 		model.addAttribute("pageSizes", PAGE_SIZES);
-        
-        
-        model.addAttribute("personsList",personsList);
-        model.addAttribute("mapRoles", getRoles());
 
-        return ResponseEntity.ok(personsList);
-    	
-    }
-	
-	
+		model.addAttribute("personsList", personsList);
+		model.addAttribute("mapRoles", getRoles());
+
+		return ResponseEntity.ok(personsList);
+
+	}
+
 	@GetMapping("/api/persons/count")
 	public ResponseEntity<Integer> countData() {
 		return ResponseEntity.ok(personService.findAll().size());
-    	
-    }
-	
-	@PostMapping //consumes = "application/json", produces = "application/json"
+
+	}
+
+	@PostMapping // consumes = "application/json", produces = "application/json"
 	public ResponseEntity<Void> createNewPerson(@Valid @RequestBody PersonDto personDto,
 			UriComponentsBuilder uriComponentsBuilder) {
 		System.out.println("here we are!!!!");
 		Person person = new Person();
 		BeanUtils.copyProperties(personDto, person);
-		person  = personService.createOrUpdatePerson(person);
+		person = personService.createOrUpdatePerson(person);
 		// host and port
 		UriComponents uriComponents = uriComponentsBuilder.path("/api/person/{id}").buildAndExpand(person.getId());
 
@@ -108,45 +108,41 @@ public class PersonController {
 		return new ResponseEntity<>(headers, HttpStatus.CREATED);
 	}
 
-	
-
-	@DeleteMapping("/api/{id}")
+	@DeleteMapping("/api/persons/{id}")
 	public ResponseEntity<Void> deletePerson(@PathVariable("id") Long id) {
 		personService.deletePersonById(id);
 		return ResponseEntity.noContent().build();
 	}
 
-	@GetMapping("/api/{id}")
+	@GetMapping("/api/persons/{id}")
 	public ResponseEntity<Person> findPersonById(@PathVariable("id") Long id) {
 		Person person = personService.findPersonById(id);
-		
-		if(person!=null) {
+
+		if (person != null) {
 			System.out.println(person);
-			return ResponseEntity.ok(person);	
+			return ResponseEntity.ok(person);
 		}
 		return ResponseEntity.notFound().build();
 	}
 
-	
-	@PutMapping("/api/{id}")
+	@PutMapping("/api/persons/{id}")
 	public ResponseEntity<Person> updatePerson(@PathVariable("id") Long id, @RequestBody PersonDto personDto) {
 		Person person = new Person();
 		BeanUtils.copyProperties(personDto, person);
 		person = personService.createOrUpdatePerson(person);
-		if(person==null) {
+		if (person == null) {
 			return ResponseEntity.notFound().build();
 		}
 		return ResponseEntity.ok(person);
-		
+
 	}
-	
-	
-    @GetMapping("/api/search/{name}")
+
+	@GetMapping("/api/search/{name}")
 	@ResponseBody
 
-    public ResponseEntity<List<Person>> search(@PathVariable("name") String name) {
+	public ResponseEntity<List<Person>> search(@PathVariable("name") String name) {
 		List<Person> personsList = personService.findByFirstnameOrLastnameOrderById(name, name);
 		return ResponseEntity.ok(personsList);
-    }
+	}
 
 }

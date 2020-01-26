@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import by.javaeecources.controller.PersonController;
+import by.javaeecources.exception.PersonNotFoundException;
 import by.javaeecources.model.Person;
 import by.javaeecources.service.PersonService;
 

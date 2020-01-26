@@ -45,6 +45,18 @@ public class PersonServiceImpl implements PersonService{
 
 	@Override
 	public Person createOrUpdatePerson(Person person) {
+		
+		/* return repository.findById(person.getId())
+	                .map(x -> {
+	                    x.setFirstname(person.getFirstname());
+	                    x.setLastname(person.getLastname());
+	                    return repository.save(x);
+	                })
+	                .orElseGet(() -> {
+	                    person.setId(person.getId());
+	                    return repository.save(person);
+	                });
+		*/
 		if(person.getId() == null ||(person.getFirstname()!=null && person.getId() == 0l && !person.getFirstname().isEmpty())) {
 			return repository.save(person);
 		}else {
@@ -52,7 +64,7 @@ public class PersonServiceImpl implements PersonService{
 			if(requestedFromDB.isPresent()) {
 				Person person2Save = requestedFromDB.get();
 				BeanUtils.copyProperties(person, person2Save);
-				
+			     
 				
 //				person2Save.setFirstname(person.getFirstname());
 //				person2Save.setLastname(person.getLastname());
