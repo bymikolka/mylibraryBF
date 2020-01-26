@@ -1,5 +1,7 @@
 package by.javaeecources.controller;
 
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,68 +28,62 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import by.javaeecources.model.Person;
 import by.javaeecources.model.PersonDto;
+
 @Controller
 public class PersonController {
 
-
-	
 	private static final int INITIAL_PAGE = 0;
 	private static final int INITIAL_PAGE_SIZE = 10;
 	private static final int[] PAGE_SIZES = { 5, 10, 25, 50 };
-	
+
 	Map<Long, String> mapRoles = null;
+
 	public Map<Long, String> getRoles() {
-		if(mapRoles!=null) {
+		if (mapRoles != null) {
 			return mapRoles;
 		}
 		mapRoles = new HashMap<>();
-	    mapRoles.put(1L, "Teacher");
-	    mapRoles.put(2L, "Student");
-	    return mapRoles;
+		mapRoles.put(1L, "Teacher");
+		mapRoles.put(2L, "Student");
+		return mapRoles;
 	}
-	
-	final String url = 	"http://localhost:8100"; 
-	
+
+	final String url = "http://localhost:8100";
+
+	private static HttpHeaders getHeaders() {
+		String plainCredentials = "user:{noop}password";
+		String base64Credentials = new String(Base64.getEncoder().encode(plainCredentials.getBytes()));
+
+		HttpHeaders headers = new HttpHeaders();
+		// headers.add("Authorization", "Basic " + base64Credentials);
+		headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+		return headers;
+	}
+
 	@GetMapping
-    public String home(@RequestParam("recordsPerPage") Optional<Integer> pageSize, 
-    		@RequestParam("currentPage") Optional<Integer> page, 
-            @RequestParam(defaultValue = "id") String sortBy, Model model){
-		 
+	public String home(@RequestParam("recordsPerPage") Optional<Integer> pageSize,
+			@RequestParam("currentPage") Optional<Integer> page, @RequestParam(defaultValue = "id") String sortBy,
+			Model model) {
+
 		RestTemplate restTemplate = new RestTemplate();
-		
+
 		int recordsPerPage = pageSize.orElse(INITIAL_PAGE_SIZE);
-		int tempPageNumber = page.isPresent()?page.get()-1:1;
-        int currentPage = (page.orElse(0) < 1) ? INITIAL_PAGE : tempPageNumber;
+		int tempPageNumber = page.isPresent() ? page.get() - 1 : 1;
+		int currentPage = (page.orElse(0) < 1) ? INITIAL_PAGE : tempPageNumber;
 
-        
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Accept", MediaType.APPLICATION_JSON_VALUE);
+		UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(url + "/api/persons")
+				.queryParam("recordsPerPage", recordsPerPage).queryParam("currentPage", currentPage);
+		HttpEntity<?> entity = new HttpEntity<>(getHeaders());
 
-        UriComponentsBuilder builder = UriComponentsBuilder.
-        		fromHttpUrl(url+"/api/persons")
-                .queryParam("recordsPerPage", recordsPerPage)
-                .queryParam("currentPage", currentPage);
-        HttpEntity<?> entity = new HttpEntity<>(headers);        
-        
-        ResponseEntity<List<Person>> responseEntity =
-                restTemplate.exchange(
-                		builder.toUriString(),
-                        HttpMethod.GET,
-                        entity,
-                        new ParameterizedTypeReference<List<Person>>() {
-                        });
+		ResponseEntity<List<Person>> responseEntity = restTemplate.exchange(builder.toUriString(), HttpMethod.GET,
+				entity, new ParameterizedTypeReference<List<Person>>() {
+				});
 
-        
-        List<Person> personsList = responseEntity.getBody();
-        assert personsList != null;
+		List<Person> personsList = responseEntity.getBody();
+		assert personsList != null;
 //count must be added to one list with personList for return as couple in one response
-        long rows = 
-                restTemplate.exchange(
-                        url+"/api/persons/count",
-                        HttpMethod.GET,
-                        null,
-                        Integer.class).getBody();
-        
+		long rows = restTemplate.exchange(url + "/api/persons/count", HttpMethod.GET, null, Integer.class).getBody();
+
 		int nOfPages = (int) (rows / recordsPerPage);
 		if (nOfPages % recordsPerPage > 0 && (nOfPages * recordsPerPage != rows)) {
 			nOfPages++;
@@ -97,131 +93,108 @@ public class PersonController {
 		model.addAttribute("currentPage", currentPage);
 		model.addAttribute("recordsPerPage", recordsPerPage);
 		model.addAttribute("pageSizes", PAGE_SIZES);
-        
-        
-        model.addAttribute("personsList",personsList);
-        model.addAttribute("mapRoles", getRoles());
 
-        return "index";
-    }
-	
-    @GetMapping("/search")
-    public String search(@ModelAttribute("person") PersonDto personDto, Model model) {
+		model.addAttribute("personsList", personsList);
+		model.addAttribute("mapRoles", getRoles());
+
+		return "index";
+	}
+
+	@GetMapping("/search")
+	public String search(@ModelAttribute("person") PersonDto personDto, Model model) {
 		Person person = new Person();
 		BeanUtils.copyProperties(personDto, person);
 		RestTemplate restTemplate = new RestTemplate();
-		ResponseEntity<List<Person>> response =
-                restTemplate.exchange(
-                        url+"/api/search/"+person.getFirstname(),
-                        HttpMethod.GET,
-                        null,
-                        new ParameterizedTypeReference<List<Person>>() {
-                        });
+		ResponseEntity<List<Person>> response = restTemplate.exchange(url + "/api/search/" + person.getFirstname(),
+				HttpMethod.GET, null, new ParameterizedTypeReference<List<Person>>() {
+				});
 
-        List<Person> personsList = response.getBody();
-		//List<Person> personsList = personService.findByFirstnameOrLastnameOrderById(person.getFirstname(), person.getFirstname());
-		model.addAttribute("personsList",personsList);
+		List<Person> personsList = response.getBody();
+		// List<Person> personsList =
+		// personService.findByFirstnameOrLastnameOrderById(person.getFirstname(),
+		// person.getFirstname());
+		model.addAttribute("personsList", personsList);
 		model.addAttribute("mapRoles", mapRoles);
-        return "index";
-    }
-	
+		return "index";
+	}
+
 	@GetMapping("/delete/{id}")
 	public String delete(@PathVariable("id") Long id) {
-		new RestTemplate().exchange(
-                        url+"/api/"+id,
-                        HttpMethod.DELETE,
-                        null,
-                        new ParameterizedTypeReference<List<Person>>() {
-                        });
-		
+		new RestTemplate().exchange(url + "/api/persons/" + id, HttpMethod.DELETE, null,
+				new ParameterizedTypeReference<List<Person>>() {
+				});
+
 		return "redirect:/";
 	}
-	
-	@GetMapping(value = "/create")
-	public String create(Model model) {
-		model.addAttribute("mapRoles", mapRoles);
-		return "newPerson";
-	}
 
-	@Transactional
-    @PostMapping("/savePerson")
-    public String savePerson(@ModelAttribute("person") PersonDto personDto) {
-		Person person = new Person();
-		BeanUtils.copyProperties(personDto, person);
-		
-		new RestTemplate().postForObject(url, person, Person.class);
-		
-        return "redirect:/";
-    }
-	
-	@GetMapping(path = { "edit", "/edit/?id={id}" })
-	public String update(Model model, @RequestParam("id") Optional<Long> id) {
-	    model.addAttribute("mapRoles", mapRoles);
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Accept", MediaType.APPLICATION_JSON_VALUE);
- 
-	    if (id.isPresent()) {
-
-	    	 ResponseEntity<Person> p = new RestTemplate().exchange(
-                    url+"/api/"+id.get(),
-                    HttpMethod.GET,
-                    null,
-                    Person.class);
-	    	
-	        if (p.getBody() != null) {
-	        	Person person = p.getBody();
-				model.addAttribute("person", person);
-	        }
-	        model.addAttribute("mapRoles", mapRoles);
-		}
-
-		return "newPerson";
-	}
-	
-/*
-	@GetMapping("/delete/{id}")
-	public String delete(@PathVariable("id") Long id) {
-		personService.delete(id);
-		return "redirect:/";
-	}
-	
-	
-	@Transactional
-    @PostMapping("/savePerson")
-    public String savePerson(@ModelAttribute("person") PersonDto personDto) {
-		Person person = new Person();
-		BeanUtils.copyProperties(personDto, person);
-		personService.createOrUpdatePerson(person);
-        return "redirect:/";
-    }
-    @GetMapping("/search")
-    public String search(@ModelAttribute("person") PersonDto personDto, Model model) {
-		Person person = new Person();
-		BeanUtils.copyProperties(personDto, person);
-		List<Person> personsList = personService.findByFirstnameOrLastnameOrderById(person.getFirstname(), person.getFirstname());
-		model.addAttribute("personsList",personsList);
-		model.addAttribute("mapRoles", mapRoles);
-        return "index";
-    }
-	
 	@PostMapping(value = "/create")
 	public String create(Model model) {
 		model.addAttribute("mapRoles", mapRoles);
 		return "newPerson";
 	}
 
+	@Transactional
+	@PostMapping("/savePerson")
+	public String savePerson(@ModelAttribute("person") PersonDto personDto) {
+		Person person = new Person();
+		BeanUtils.copyProperties(personDto, person);
+
+		new RestTemplate().postForObject(url, person, Person.class);
+
+		return "redirect:/";
+	}
 
 	@GetMapping(path = { "edit", "/edit/?id={id}" })
 	public String update(Model model, @RequestParam("id") Optional<Long> id) {
-	    model.addAttribute("mapRoles", mapRoles);
+		model.addAttribute("mapRoles", mapRoles);
+		HttpHeaders headers = new HttpHeaders();
+		headers.add("Accept", MediaType.APPLICATION_JSON_VALUE);
+
 		if (id.isPresent()) {
-			Optional<Person> personOptional = personService.findById(id.get());
-			if (personOptional.isPresent()) {
-				model.addAttribute("person", personOptional.get());
+
+			ResponseEntity<Person> p = new RestTemplate().exchange(url + "/api/persons/" + id.get(), HttpMethod.GET,
+					null, Person.class);
+
+			if (p.getBody() != null) {
+				Person person = p.getBody();
+				model.addAttribute("person", person);
 			}
+			model.addAttribute("mapRoles", mapRoles);
 		}
 
 		return "newPerson";
 	}
-	*/
+
+	/*
+	 * @GetMapping("/delete/{id}") public String delete(@PathVariable("id") Long id)
+	 * { personService.delete(id); return "redirect:/"; }
+	 * 
+	 * 
+	 * @Transactional
+	 * 
+	 * @PostMapping("/savePerson") public String
+	 * savePerson(@ModelAttribute("person") PersonDto personDto) { Person person =
+	 * new Person(); BeanUtils.copyProperties(personDto, person);
+	 * personService.createOrUpdatePerson(person); return "redirect:/"; }
+	 * 
+	 * @GetMapping("/search") public String search(@ModelAttribute("person")
+	 * PersonDto personDto, Model model) { Person person = new Person();
+	 * BeanUtils.copyProperties(personDto, person); List<Person> personsList =
+	 * personService.findByFirstnameOrLastnameOrderById(person.getFirstname(),
+	 * person.getFirstname()); model.addAttribute("personsList",personsList);
+	 * model.addAttribute("mapRoles", mapRoles); return "index"; }
+	 * 
+	 * @PostMapping(value = "/create") public String create(Model model) {
+	 * model.addAttribute("mapRoles", mapRoles); return "newPerson"; }
+	 * 
+	 * 
+	 * @GetMapping(path = { "edit", "/edit/?id={id}" }) public String update(Model
+	 * model, @RequestParam("id") Optional<Long> id) {
+	 * model.addAttribute("mapRoles", mapRoles); if (id.isPresent()) {
+	 * Optional<Person> personOptional = personService.findById(id.get()); if
+	 * (personOptional.isPresent()) { model.addAttribute("person",
+	 * personOptional.get()); } }
+	 * 
+	 * return "newPerson"; }
+	 */
 }
