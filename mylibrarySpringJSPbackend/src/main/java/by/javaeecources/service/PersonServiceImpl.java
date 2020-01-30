@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import by.javaeecources.aop.LogExecutionTime;
 import by.javaeecources.model.Person;
 import by.javaeecources.repository.PersonRepository;
 
@@ -111,6 +112,7 @@ public class PersonServiceImpl implements PersonService{
 
 
 	@Override
+	@LogExecutionTime
 	public List<Person> findAll(Integer pageNo, Integer pageSize, String sortBy) {
 		Pageable paging = PageRequest.of(pageNo, pageSize, Sort.by(sortBy));
 		 
